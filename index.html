@@ -75,8 +75,8 @@ dialog label{display:block;font-size:13px;color:var(--mu);margin:8px 0 0}
 <div class="row"><button class="g" onclick="$('#dB').close()">Cancelar</button><button onclick="sb()">Salvar</button></div></dialog>
 
 <dialog id="dS"><h3>Registrar leitura</h3><p class="mu" id="st"></p>
-<div class="row"><label>Páginas lidas<input id="sp" type="number" min="0"></label><label>Minutos<input id="sm" type="number" min="0"></label></div>
-<label>Data<input id="sd" type="date"></label>
+<div class="row"><label>Parei na página<input id="sp" type="number" min="0" oninput="pv()"></label><label>Minutos<input id="sm" type="number" min="0"></label></div>
+<p class="mu" id="sh"></p><label>Data<input id="sd" type="date"></label>
 <div class="row"><button class="g" onclick="$('#dS').close()">Cancelar</button><button onclick="ss()">Salvar</button></div></dialog>
 
 <dialog id="dG"><h3>Metas e dados</h3>
@@ -128,7 +128,7 @@ for(const d=new Date(s);d<=e;d.setDate(d.getDate()+1)){const k=fmt(d),t=M[k],r=S
 if(t){const a=[];if(g.pages)a.push(t.p/g.pages);if(g.min)a.push(t.m/g.min);let x=a.length?Math.min(...a):1;x=Math.max(x,.1);l=x<.5?1:x<1?2:x<2?3:4}
 h+=`<i class="l${l}${r?' rs':''}" title="${fd(k)}${t?': '+t.p+' pág, '+t.m+' min':''}${r?' (descanso)':''}" onclick="rd('${k}')"></i>`}
 $('#cal').innerHTML=h;$('#cal').scrollLeft=1e5}
-function acts(b){const i=b.id;let h=b.status=='lendo'?`<button onclick="qa('${i}',10,0)">+10 pág</button><button onclick="qa('${i}',0,15)">+15 min</button><button onclick="oS('${i}')">Registrar</button><button onclick="tm('${i}')">⏱</button>`:b.status=='quero'?`<button onclick="st('${i}','lendo')">Começar</button>`:`<button onclick="st('${i}','lendo')">Reler</button>`;
+function acts(b){const i=b.id;let h=b.status=='lendo'?`<button onclick="oS('${i}')">Registrar</button><button onclick="tm('${i}')">⏱</button>`:b.status=='quero'?`<button onclick="st('${i}','lendo')">Começar</button>`:`<button onclick="st('${i}','lendo')">Reler</button>`;
 return h+`<button class="g" onclick="oB('${i}')">✎</button><button class="g" onclick="del('${i}')">🗑</button>`}
 function card(b){const pc=Math.min(100,Math.round(b.read/b.pages*100)),dt=b.status=='lido'?'Concluído em '+fd(b.finished):b.status=='lendo'?'Início em '+fd(b.started):'Adicionado em '+fd(b.added);
 return `<article class="bk"><div class="cv">${b.cover?`<img src="${b.cover}" alt="">`:`<span>${esc(b.title)}</span>`}</div><div class="bi"><h4>${esc(b.title)}</h4><p class="mu">${esc(b.author)}${b.author&&b.genre?' · ':''}${esc(b.genre)}</p>${pb(pc/100)}<p class="mu">${b.read}/${b.pages} pág · ${pc}%${b.min?' · '+b.min+' min':''}</p><p class="mu">${dt}</p><div class="ac">${acts(b)}</div></div></article>`}
@@ -156,8 +156,11 @@ if(s=='lido'){b.read=p;b.finished=b.finished||today();b.started=b.started||b.fin
 b.status=s;tab=s;save();$('#dB').close();render()}
 function del(id){if(confirm('Excluir este livro?')){S.books=S.books.filter(b=>b.id!==id);save();render()}}
 function st(id,s){const b=S.books.find(x=>x.id===id);if(b.status=='lido'){if(!confirm('Recomeçar esta leitura do zero?'))return;b.read=0;b.finished=''}b.status=s;b.started=today();tab=s;save();render()}
-function oS(id,m){sid=id;$('#st').textContent=S.books.find(b=>b.id===id).title;$('#sp').value='';$('#sm').value=m||'';$('#sd').value=today();$('#dS').showModal()}
-function ss(){addSession(sid,$('#sp').value,$('#sm').value,$('#sd').value||today());$('#dS').close()}
+function oS(id,m){sid=id;const b=S.books.find(x=>x.id===id);$('#st').textContent=b.title;$('#sp').value='';$('#sm').value=m||'';$('#sd').value=today();pv();$('#dS').showModal()}
+function pv(){const b=S.books.find(x=>x.id===sid),v=$('#sp').value,h=`Você estava na pág. ${b.read} de ${b.pages}.`;$('#sh').textContent=v===''?h:h+` Isso soma ${Math.max(0,+v-b.read)} página(s) lida(s).`}
+function ss(){const b=S.books.find(x=>x.id===sid),v=$('#sp').value;let p=0;if(v!==''){const n=+v;if(n<b.read){alert(`A página informada (${n}) é menor que a página atual (${b.read}). Informe uma página igual ou maior.`);return}if(n>b.pages){alert(`Este livro tem ${b.pages} páginas.`);return}p=n-b.read}
+if(!p&&!(+$('#sm').value)){alert('Informe a página em que parou ou os minutos lidos.');return}
+addSession(sid,p,$('#sm').value,$('#sd').value||today());$('#dS').close()}
 function tm(id){if(timer){alert('Já existe um cronômetro ativo.');return}timer={id,t:Date.now()};try{localStorage.setItem(K+'t',JSON.stringify(timer))}catch(e){}$('#tb').hidden=true;tbar()}
 function stp(){const m=Math.max(1,Math.round((Date.now()-timer.t)/60000)),id=timer.id;timer=null;try{localStorage.removeItem(K+'t')}catch(e){}$('#tb').hidden=true;oS(id,m)}
 function tbar(){const x=$('#tb');if(!timer||!S.books.find(b=>b.id===timer.id)){x.hidden=true;return}
